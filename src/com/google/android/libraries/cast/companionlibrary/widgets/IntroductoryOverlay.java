@@ -24,6 +24,7 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.TypedArray;
@@ -48,6 +49,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -85,6 +87,7 @@ public class IntroductoryOverlay extends RelativeLayout {
     private TextView mSubtitleText;
     private Button mButton;
     private Context mContext;
+    private Dialog mDialog;
     private float mFocusRadius;
     private int mOverlayColorId;
     private int mCenterY;
@@ -113,6 +116,7 @@ public class IntroductoryOverlay extends RelativeLayout {
         TypedArray typedArray = mContext.getTheme()
                 .obtainStyledAttributes(attrs, R.styleable.CCLIntroOverlay,
                         R.attr.CCLIntroOverlayStyle, R.style.CCLIntroOverlay);
+        mDialog = builder.mDialog;
         if (builder.mOverlayColor != 0) {
             mOverlayColorId = builder.mOverlayColor;
         } else {
@@ -146,12 +150,16 @@ public class IntroductoryOverlay extends RelativeLayout {
         if (mIsSingleTime && isFtuShown(mContext)) {
             // we are exceeding the max number
             mContext = null;
+            mDialog = null;
             mListener = null;
             return;
         }
         if (!mIsOverlayVisible) {
             mIsOverlayVisible = true;
-            ((ViewGroup) ((Activity) mContext).getWindow().getDecorView()).addView(this);
+            Window window = mDialog == null
+                    ? ((Activity) mContext).getWindow()
+                    : mDialog.getWindow();
+            ((ViewGroup) window.getDecorView()).addView(this);
         }
     }
 
@@ -163,13 +171,17 @@ public class IntroductoryOverlay extends RelativeLayout {
      */
     public void remove() {
         if (mContext != null) {
-            ((ViewGroup) ((Activity) mContext).getWindow().getDecorView()).removeView(this);
+            Window window = mDialog == null
+                    ? ((Activity) mContext).getWindow()
+                    : mDialog.getWindow();
+            ((ViewGroup) window.getDecorView()).removeView(this);
         }
         if (mBitmap != null && !mBitmap.isRecycled()) {
             mBitmap.recycle();
         }
         mBitmap = null;
         mContext = null;
+        mDialog = null;
         mListener = null;
     }
 
@@ -232,6 +244,7 @@ public class IntroductoryOverlay extends RelativeLayout {
         // we make sure we do a clean up
         if (mContext != null) {
             mContext = null;
+            mDialog = null;
         }
         super.onDetachedFromWindow();
     }
@@ -272,6 +285,7 @@ public class IntroductoryOverlay extends RelativeLayout {
 
         private MenuItem mMenuItem;
         private Context mContext;
+        private Dialog mDialog;
 
         @ColorRes
         private float mRadius;
@@ -306,10 +320,18 @@ public class IntroductoryOverlay extends RelativeLayout {
         }
 
         /**
-         * Set the {@link MediaRouteButton} that the ovelay should focus on.
+         * Set the {@link MediaRouteButton} that the overlay should focus on.
          */
         public Builder setMediaRouteButton(MediaRouteButton button) {
             mView = button;
+            return this;
+        }
+
+        /**
+         * Set the {@link Dialog} that the overlay should shown over. This is optional.
+         */
+        public Builder setDialog(Dialog dialog) {
+            mDialog = dialog;
             return this;
         }
 
